@@ -10,10 +10,10 @@
 ## Installation :
 
 ### Required :
-#### *Linux System
+#### *Linux System*
 
 #### for Ubuntu/Debian/Kali Other Distro on debian
-sudo apt update && sudo apt install python2 python python2-dev python-dev python-pip python-opencv python-crypto wine-stable wine wine-python-2.7 git
+sudo apt update && sudo apt install python2 python python2-dev python-dev python-pip python-opencv python-crypto wine-stable wine wine-python-2.7 python-opencv python-netifaces python-setuptools python-requests git
 
 #### cd DarkRise && python2 -m pip install -r modules_linux.txt && wine python -m pip install -r modules_windows.txt && git clone https://github.com/Dxvistxr/pyinstaller
 
