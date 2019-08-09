@@ -1,7 +1,9 @@
 ## DarkRise
 ### DarkRise Malware Framework Tools
 ### Version : 1.0
-### Content : Backdoor, Reverse Shell, Botnet with Python2.7
+### Content : Backdoor, Keylogger, Reverse Shell with Python2.7
+### Coming Soon : Ransomware, Other Malware, Spyware
+
 ![Image1](capture1.png)
 ![Image2](capture2.png)
 
