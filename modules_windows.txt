@@ -15,3 +15,6 @@ Pillow
 pywin32
 pyinstaller
 setuptools
+sounddevice
+scipy
+Math
