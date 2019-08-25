@@ -19,7 +19,6 @@ def ftp_server(host,port,user,passwd,pathroot):
 def main():
     parser = argparse.ArgumentParser()
     print('\033[1;93m')
-    print('\033[1;93m[*] By Dxvistxr')
     parser.add_argument('host',type=str, help='Set FTP Host')
     parser.add_argument('port',type=int, help='Set FTP Port')
     parser.add_argument('user',type=str,help='Set FTP USER')
